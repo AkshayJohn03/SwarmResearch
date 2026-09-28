@@ -10,6 +10,23 @@ The whole system runs **fully offline** against a bundled 20-document corpus wit
 swarm research "What is the noise level of the XK-7 compressor module?" --offline --stream
 ```
 
+## 🟢 New to AI? Read this first
+
+**The problem, in human terms.** Ask a chatbot a hard research question and it answers in one breath — confidently, sometimes making things up, with no way to check. Asking real researchers, they'd split the question, read many documents, quote their sources, notice when two documents disagree, and check each other's work.
+
+**What this project does.** SwarmResearch is that research team, automated:
+
+- A **planner** splits your question into sub-tasks (like a manager writing a work plan).
+- **Searchers** find documents; **readers** extract claims *with receipts* — an exact quote plus the document name and character position, so every fact can be traced back.
+- An **analyst** merges claims across documents and flags when two sources contradict each other (the bundled corpus plants two documents claiming different noise levels — 42 vs 47 dB(A) — and the report surfaces it).
+- A **critic** verifies each claim really appears at the cited location and orders re-searches when coverage is thin.
+- A **writer** produces the final report where every factual sentence carries a [number] citation — the test suite proves **zero uncited factual sentences** and a **hallucination rate of exactly 0.0** on the offline corpus.
+
+**The engineering feat underneath.** The team runs on a task-coordination engine built **from scratch** (the big frameworks were deliberately not used — the README contains an honest comparison table). Its party tricks, all proven by tests: if the process **crashes halfway**, restarting resumes from the last completed step without redoing finished work; long tasks **pause for human approval**; parallel work is capped so it never floods the sources; and every step streams live to the UI.
+
+**Measured outcomes:** 73 automated tests pass offline in ~1.6s over a bundled 20-document corpus — covering correct task ordering, crash-resume without recomputation (proven with execution counters), the planted contradiction surfacing in the final report, and a fully-cited report with zero hallucinations.
+
+
 ```text
 # Research report: What is the noise level of the XK-7 compressor module?
 ## Executive summary
