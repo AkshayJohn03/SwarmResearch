@@ -1,0 +1,14 @@
+line-length = 100
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = [
+  # Justified ignores:
+  # E501 - report/prompt/corpus literals occasionally exceed 100 chars; wrapping them
+  #        would hurt readability of template text. All code lines stay short.
+  "E501",
+]
+
+[lint.isort]
+known-first-party = ["swarm"]
