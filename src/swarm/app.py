@@ -1,9 +1,17 @@
 """FastAPI service and CLI entrypoint.
 
 Endpoints:
-    POST /research          start a research run (returns run_id immediately)
-    GET  /research/stream   SSE: node events -> report tokens -> report -> done
-    GET  /runs/{run_id}     status / report / metrics
+    POST /research                  start a research run (returns run_id immediately)
+    GET  /research/stream           SSE: node events -> report tokens -> report -> done
+    GET  /runs/{run_id}             status / report / metrics / approval ids
+    GET  /approvals?status=         audited human-approval queue
+    POST /approvals/{id}/decision   apply the one-and-only verdict (409 on re-decide)
+
+Cross-cutting (when ``SWARM_API_KEYS`` is set, every route but /health and
+/metrics requires ``X-API-Key``): every response carries an
+``X-Correlation-ID`` (inbound or generated), and research bodies over 8 KiB
+are rejected with 413. A run pausing on HumanInterrupt opens an audited
+approval request (see swarm.serve.approvals).
 
 CLI:
     swarm research "query" --offline --stream
@@ -17,13 +25,21 @@ import asyncio
 import json
 import logging
 from dataclasses import dataclass, field
+from typing import Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from swarm.orchestra.runtime import GraphCompleted, RuntimeEvent
+from swarm.orchestra.runtime import GraphCompleted, NodePaused, RuntimeEvent
 from swarm.pipeline import ResearchPipeline, ResearchRunResult
+from swarm.serve.approvals import ApprovalAlreadyDecided, ApprovalStore, InvalidDecision
+from swarm.serve.auth import APIKeyAuth, APIKeyMiddleware
+from swarm.serve.middleware import (
+    MAX_REQUEST_BODY_BYTES,
+    BodySizeLimitMiddleware,
+    CorrelationIdMiddleware,
+)
 from swarm.settings import SwarmSettings
 
 logger = logging.getLogger("swarm.app")
@@ -44,6 +60,12 @@ class ResearchRequest(BaseModel):
     offline: bool = True
 
 
+class ApprovalDecisionRequest(BaseModel):
+    decision: Literal["approve", "reject"]
+    decided_by: str
+    reason: str = ""
+
+
 @dataclass
 class RunHandle:
     run_id: str
@@ -53,6 +75,7 @@ class RunHandle:
     report: str = ""
     metrics: dict[str, float] = field(default_factory=dict)
     error: str | None = None
+    approvals: list[str] = field(default_factory=list)
 
 
 class EventLog:
@@ -96,10 +119,20 @@ class EventLog:
                 return
 
 
-def create_app(settings: SwarmSettings | None = None) -> FastAPI:
+def create_app(
+    settings: SwarmSettings | None = None, approval_store: ApprovalStore | None = None
+) -> FastAPI:
     settings = settings or SwarmSettings()
+    auth = APIKeyAuth(settings.api_keys)
+    approvals = approval_store or ApprovalStore()
     app = FastAPI(title="SwarmResearch", version="0.1.0")
     runs: dict[str, RunHandle] = {}
+
+    # Request path order = reverse of registration below:
+    # correlation -> auth -> body limit -> routes.
+    app.add_middleware(BodySizeLimitMiddleware, max_bytes=MAX_REQUEST_BODY_BYTES, protected_paths={"/research"})
+    app.add_middleware(APIKeyMiddleware, auth=auth)
+    app.add_middleware(CorrelationIdMiddleware)
 
     async def _execute(handle: RunHandle, pipeline: ResearchPipeline) -> None:
         try:
@@ -124,17 +157,38 @@ def create_app(settings: SwarmSettings | None = None) -> FastAPI:
             )
             handle.log.notify()
 
+    def _on_event(handle: RunHandle, event: RuntimeEvent) -> None:
+        handle.log.append(event)
+        handle.log.notify()
+        # HumanInterrupt extension: a paused node opens an audited approval
+        # request so the pause is actionable (decide via POST /approvals/{id}/decision).
+        if isinstance(event, NodePaused):
+            handle.approvals.append(
+                approvals.request_approval(
+                    node_id=event.node_id,
+                    payload={"run_id": handle.run_id, "prompt": event.prompt},
+                    requested_by="serve",
+                )
+            )
+
     @app.post("/research")
-    async def start_research(request: ResearchRequest) -> dict:
-        run_settings = settings.model_copy(update={"offline": request.offline})
+    async def start_research(request: Request, request_body: ResearchRequest) -> dict:
+        run_settings = settings.model_copy(update={"offline": request_body.offline})
         pipeline = ResearchPipeline(run_settings)
         import uuid
 
-        handle = RunHandle(run_id=uuid.uuid4().hex[:12], query=request.query)
+        handle = RunHandle(run_id=uuid.uuid4().hex[:12], query=request_body.query)
         runs[handle.run_id] = handle
-        pipeline.event_bus.subscribe(lambda event: (handle.log.append(event), handle.log.notify()))
+        pipeline.event_bus.subscribe(
+            lambda event: _on_event(handle, event)
+        )
         asyncio.create_task(_execute(handle, pipeline))
-        return {"run_id": handle.run_id, "status": "running", "stream": f"/research/stream?run_id={handle.run_id}"}
+        return {
+            "run_id": handle.run_id,
+            "status": "running",
+            "stream": f"/research/stream?run_id={handle.run_id}",
+            "correlation_id": request.scope["correlation_id"],
+        }
 
     @app.get("/research/stream")
     async def stream_research(run_id: str) -> StreamingResponse:
@@ -178,7 +232,24 @@ def create_app(settings: SwarmSettings | None = None) -> FastAPI:
             "metrics": handle.metrics,
             "error": handle.error,
             "report": handle.report or None,
+            "approvals": handle.approvals,
         }
+
+    @app.get("/approvals")
+    async def list_approvals(status: str | None = None) -> dict:
+        return {"approvals": [record.public() for record in approvals.list(status=status)]}
+
+    @app.post("/approvals/{approval_id}/decision")
+    async def decide_approval(approval_id: str, body: ApprovalDecisionRequest) -> dict:
+        try:
+            record = approvals.decide(approval_id, body.decision, body.decided_by, body.reason)
+        except ApprovalAlreadyDecided as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail="unknown approval_id") from exc
+        except InvalidDecision as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return record.public()
 
     return app
 

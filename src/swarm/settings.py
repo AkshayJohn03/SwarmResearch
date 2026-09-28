@@ -33,3 +33,8 @@ class SwarmSettings(BaseSettings):
 
     # Optional override for the bundled corpus location (tests / custom corpora).
     corpus_dir: Path | None = None
+
+    # --- Serving / auth ---
+    # Comma-separated RAW API keys (env SWARM_API_KEYS). Only SHA-256 hashes are
+    # stored at rest (serve/auth.py). Unset/empty = auth disabled with warning.
+    api_keys: str | None = None

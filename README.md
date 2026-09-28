@@ -205,6 +205,7 @@ print(result.metrics["hallucination_rate"], result.metrics["contradictions"])
 | `SWARM_CLAIMS_PER_DOC` | `5` | Extractive claims kept per document |
 | `SWARM_TOKEN_BUDGET` | `6000` | Working-memory budget for the compressor |
 | `SWARM_COVERAGE_THRESHOLD` | `0.8` | Critic coverage gate for re-tasking |
+| `SWARM_API_KEYS` | — | Comma-separated RAW API keys; unset = auth disabled with warning. Only SHA-256 hashes are stored at rest |
 
 ## Testing
 
@@ -232,6 +233,13 @@ Highlights of what is *proven*, not just smoke-tested:
 - **Tool sandboxing.** `WebSearchBackend` refuses to construct without an explicitly configured endpoint (no silent fallback to network), and the offline flag gates every LLM call. A production deployment would add per-backend allow-lists, response size caps, and content-type checks before reader ingestion.
 - **Checkpoint hygiene.** The sqlite store uses WAL mode; node outputs are persisted as JSON with pydantic revival on resume, so a crashed run on one process resumes in another without re-executing completed (and possibly expensive) LLM nodes.
 - **Observability.** Every attempt emits a span dict (`span_id`, `parent_id`, `name`, `stage`, `duration_ms`, `status`, `attrs`) — the exact shape expected by a ForensiQ-style forensics pipeline, adaptable to OTel by renaming keys.
+
+### Production API surface
+
+- **API-key auth** — set `SWARM_API_KEYS` (comma-separated raw keys) and every route except `/health` and `/metrics` requires `X-API-Key`, returning a generic 401 otherwise. Keys are hashed with SHA-256 at ingest; only hashes are stored and compared (constant-time), raw keys are never logged. Unset (default) → auth is disabled with a startup warning, so existing deployments keep working.
+- **Audited human approvals** — the HumanInterrupt flow is now actionable: a run pausing on a node opens an approval request (`src/swarm/serve/approvals.py`), and every request/decision is appended to an append-only JSONL audit log (`audit_log.jsonl`: `ts`, `actor`, `action`, `approval_id`, `node_id`, `decision`, `reason` — never truncated or rewritten). `GET /approvals?status=` lists the queue; `POST /approvals/{id}/decision` applies the one-and-only verdict (`409` on a second decision). Approval ids surface on `GET /runs/{run_id}`.
+- **Correlation ids** — send `X-Correlation-ID` or one is generated (uuid4); it is echoed on every response and returned in the `POST /research` body for log joining across the stack.
+- **Request limits** — research bodies over 8 KiB are rejected with `413` before the pipeline starts.
 
 ## Limitations
 
