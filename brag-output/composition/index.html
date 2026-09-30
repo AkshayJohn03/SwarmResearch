@@ -1,0 +1,819 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1920, height=1080" />
+<title>SwarmResearch — whiteboard lecture</title>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>
+  @font-face {
+    font-family: "Ink Free";
+    src: url("assets/fonts/Inkfree.ttf") format("truetype");
+    font-weight: normal; font-style: normal;
+  }
+  :root {
+    --board: #13211d;
+    --chalk: #f2f0e9;
+    --chalk-dim: #d5d2c6;
+    --amber: #f5b942;
+    --teal: #63d3c3;
+    --blue: #9ec5e8;
+    --line: rgba(242, 240, 233, 0.25);
+  }
+  body { margin: 0; background: #0d1714; }
+  #root {
+    position: relative; width: 100%; height: 100%; overflow: hidden;
+    background:
+      radial-gradient(1400px 900px at 42% 38%, rgba(255,255,255,0.05), rgba(0,0,0,0) 62%),
+      radial-gradient(1200px 800px at 85% 90%, rgba(0,0,0,0.28), rgba(0,0,0,0) 60%),
+      var(--board);
+    color: var(--chalk);
+    font-family: system-ui, sans-serif;
+  }
+  .clip { position: absolute; inset: 0; }
+  .scene-inner { position: absolute; inset: 0; }
+  .board {
+    position: absolute; inset: 0; box-sizing: border-box;
+    display: grid; grid-template-columns: minmax(0, 1fr) 440px; gap: 34px;
+    padding: 52px 60px 88px;
+  }
+  .main { position: relative; min-width: 0; }
+  .rail { position: relative; display: flex; flex-direction: column; gap: 14px; justify-content: center; min-width: 0; }
+  h1 {
+    margin: 0 0 24px 0; font-family: "Ink Free", system-ui, sans-serif;
+    font-weight: 400; font-size: 52px; line-height: 1.08; color: var(--chalk);
+  }
+  .u { display: block; width: 240px; height: 5px; margin-top: 12px; border-radius: 3px;
+       background: linear-gradient(90deg, var(--amber), rgba(245,185,66,0.15)); }
+  .u.teal { background: linear-gradient(90deg, var(--teal), rgba(99,211,195,0.15)); }
+  .u.blue { background: linear-gradient(90deg, var(--blue), rgba(158,197,232,0.15)); }
+  .scene-tag {
+    position: absolute; left: 60px; bottom: 30px;
+    font-family: "Ink Free", system-ui, sans-serif; font-size: 26px; color: var(--chalk-dim);
+  }
+  .kcard {
+    background: rgba(255,255,255,0.05); border: 1px solid var(--line);
+    border-left: 5px solid var(--teal); border-radius: 10px; padding: 14px 18px;
+  }
+  .kcard.amber { border-left-color: var(--amber); }
+  .kcard.blue { border-left-color: var(--blue); }
+  .kcard .term { font-family: "Ink Free", system-ui, sans-serif; font-size: 28px; color: var(--chalk); display: block; }
+  .kcard .def { display: block; margin-top: 4px; font-size: 21px; line-height: 1.32; color: var(--chalk-dim); }
+  .panel {
+    background: rgba(255,255,255,0.045); border: 1.5px solid var(--line); border-radius: 12px;
+    padding: 16px 20px;
+  }
+  .panel .cap { font-family: "Ink Free", system-ui, sans-serif; font-size: 25px; color: var(--chalk); display: block; margin-bottom: 8px; }
+  .mono { font-family: ui-monospace, monospace; }
+  .chip { display: inline-block; border-radius: 999px; padding: 4px 14px; font-size: 22px; font-weight: 600; }
+  .chip.amber { background: var(--amber); color: #241a06; }
+  .chip.teal { background: var(--teal); color: #0d2621; }
+  .chip.blue { background: var(--blue); color: #10202e; }
+  .chip.ghost { border: 1.5px solid var(--line); color: var(--chalk-dim); }
+  .row { display: flex; align-items: center; gap: 14px; }
+  .dim { color: var(--chalk-dim); }
+  .amber { color: var(--amber); }
+  .teal { color: var(--teal); }
+  .blue { color: var(--blue); }
+  svg.stroke { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .absbox { position: absolute; box-sizing: border-box; }
+  .doodle {
+    position: absolute; right: 24px; top: 16px; width: 96px; height: 96px;
+    border: 3px dashed rgba(99,211,195,0.4); border-radius: 50%;
+  }
+  .doodle::after {
+    content: ""; position: absolute; left: 18px; top: 18px; right: 18px; bottom: 18px;
+    border: 2px dashed rgba(245,185,66,0.35); border-radius: 50%;
+  }
+
+  /* ---- scene 1: one breath ---- */
+  #s1-q { position: absolute; left: 20px; top: 150px; width: 640px; }
+  .bubble { border-radius: 16px; padding: 16px 20px; }
+  .bubble .who { display: block; font-size: 19px; color: var(--chalk-dim); margin-bottom: 6px; }
+  .bubble .txt { font-size: 25px; line-height: 1.32; }
+  #s1-q .bubble { border: 2px solid var(--teal); background: rgba(99,211,195,0.07); }
+  #s1-a { position: absolute; right: 10px; top: 210px; width: 620px; }
+  #s1-a .bubble { border: 2.5px solid var(--amber); background: rgba(245,185,66,0.07); }
+  #s1-stamp { position: absolute; right: 40px; top: 400px; transform-origin: center; }
+  #s1-stamp .chip { font-family: "Ink Free", system-ui, sans-serif; font-size: 30px; padding: 8px 22px; }
+  #s1-team { position: absolute; left: 20px; right: 10px; top: 560px; }
+  #s1-team .cap { font-family: "Ink Free", system-ui, sans-serif; font-size: 28px; display: block; margin-bottom: 16px; }
+  .crew { display: flex; gap: 18px; }
+  .mate { flex: 1; border: 2px dashed var(--line); border-radius: 12px; padding: 12px 8px; text-align: center; }
+  .mate .dot { display: block; width: 44px; height: 44px; margin: 0 auto 8px; border: 2.5px solid var(--teal); border-radius: 50%; }
+  .mate .nm { display: block; font-family: "Ink Free", system-ui, sans-serif; font-size: 22px; color: var(--chalk); }
+  #s1-close { position: absolute; left: 20px; right: 10px; top: 760px; font-family: "Ink Free", system-ui, sans-serif; font-size: 32px; color: var(--amber); }
+  #s1-doodle { position: absolute; left: 490px; top: 26px; width: 104px; height: 104px;
+    border: 3px dashed rgba(245,185,66,0.5); border-radius: 50%; }
+
+  /* ---- scene 2: the team ---- */
+  .role { display: grid; grid-template-columns: 230px 1fr; gap: 18px; align-items: center;
+          border: 2px solid var(--line); border-radius: 12px; padding: 10px 18px; margin-bottom: 12px;
+          background: rgba(255,255,255,0.035); }
+  .role .nm { font-family: "Ink Free", system-ui, sans-serif; font-size: 30px; color: var(--chalk); }
+  .role .job { font-size: 21.5px; line-height: 1.28; color: var(--chalk-dim); }
+  .role.hot { border-color: var(--teal); }
+  #s2-foot { position: absolute; left: 0; right: 0; bottom: 4px; font-family: "Ink Free", system-ui, sans-serif; font-size: 30px; color: var(--amber); }
+
+  /* ---- scene 3: receipts ---- */
+  #s3-doc { position: absolute; left: 0; top: 128px; width: 700px; }
+  #s3-doc .body { font-size: 21.5px; line-height: 1.5; color: var(--chalk-dim); }
+  #s3-doc .mark { color: var(--chalk); padding: 1px 2px; border-radius: 3px; }
+  #s3-off { display: flex; justify-content: space-between; margin-top: 12px; font-size: 20px; color: var(--amber); }
+  #s3-claim { position: absolute; right: 0; top: 128px; width: 560px; border: 2px solid var(--teal); border-radius: 14px; background: rgba(99,211,195,0.06); padding: 16px 20px; }
+  #s3-claim .cap { font-family: "Ink Free", system-ui, sans-serif; font-size: 26px; color: var(--teal); display: block; margin-bottom: 8px; }
+  #s3-claim .q { font-size: 21.5px; line-height: 1.42; color: var(--chalk); }
+  #s3-claim .meta { display: block; margin-top: 12px; font-size: 19px; color: var(--chalk-dim); }
+  #s3-inv { position: absolute; left: 0; right: 0; top: 520px; border: 1.5px dashed var(--line); border-radius: 12px; padding: 14px 20px; font-size: 24px; }
+  #s3-inv .ok { color: var(--teal); font-weight: 700; }
+  #s3-stamp { position: absolute; right: 30px; top: 640px; }
+  #s3-stamp .chip { font-family: "Ink Free", system-ui, sans-serif; font-size: 27px; padding: 7px 20px; }
+
+  /* ---- scene 4: DAG ---- */
+  .dag { position: absolute; left: 0; top: 150px; width: 1310px; height: 700px; }
+  .dnode { position: absolute; box-sizing: border-box; border: 2.5px solid var(--blue); border-radius: 10px;
+           background: rgba(158,197,232,0.08); padding: 8px 8px; text-align: center;
+           font-family: "Ink Free", system-ui, sans-serif; font-size: 21px; color: var(--chalk); width: 130px; }
+  .dnode.teal { border-color: var(--teal); background: rgba(99,211,195,0.08); }
+  .dnode.amber { border-color: var(--amber); background: rgba(245,185,66,0.08); }
+  .dnode.diamond { border-radius: 16px; border-color: var(--amber); }
+  .dnode .sub { display: block; font-size: 15px; color: var(--chalk-dim); font-family: system-ui, sans-serif; }
+  #s4-sem { position: absolute; left: 180px; top: 582px; }
+  #s4-note { position: absolute; left: 0; bottom: 6px; font-size: 23px; color: var(--chalk-dim); }
+  #s4-note b { color: var(--amber); font-weight: 600; }
+
+  /* ---- scene 5: crash/resume ---- */
+  .runrow { position: absolute; left: 0; right: 0; display: flex; gap: 10px; }
+  .nchip { flex: 1; border: 2px solid var(--line); border-radius: 10px; padding: 10px 6px; text-align: center;
+           font-family: ui-monospace, monospace; font-size: 19px; color: var(--chalk-dim); background: rgba(255,255,255,0.035); }
+  .nchip.done { border-color: var(--teal); color: var(--chalk); }
+  .nchip.done .st { color: var(--teal); }
+  .nchip.fail { border-color: var(--amber); color: var(--chalk); }
+  .nchip .st { display: block; font-size: 17px; margin-top: 4px; }
+  #s5-crashmark { position: absolute; left: 640px; top: 242px; font-family: "Ink Free", system-ui, sans-serif; font-size: 34px; color: var(--amber); }
+  #s5-cp { position: absolute; left: 0; right: 0; top: 300px; border: 2px solid var(--blue); border-radius: 12px; background: rgba(158,197,232,0.06); padding: 14px 20px; }
+  #s5-cp .cap { font-family: "Ink Free", system-ui, sans-serif; font-size: 26px; color: var(--blue); display: block; margin-bottom: 6px; }
+  #s5-cp .bd { font-size: 21.5px; color: var(--chalk-dim); line-height: 1.35; }
+  #s5-proof { position: absolute; left: 0; right: 0; top: 590px; border: 1.5px dashed var(--line); border-radius: 12px; padding: 14px 20px; font-size: 23px; }
+  #s5-foot { position: absolute; left: 0; right: 0; top: 690px; font-family: "Ink Free", system-ui, sans-serif; font-size: 30px; color: var(--amber); }
+  .cnt { color: var(--teal); font-weight: 700; }
+
+  /* ---- scene 6: contradiction ---- */
+  .doccard { position: absolute; top: 130px; width: 520px; border: 2px solid var(--blue); border-radius: 14px; background: rgba(158,197,232,0.06); padding: 14px 18px; }
+  .doccard .cap { font-family: ui-monospace, monospace; font-size: 19px; color: var(--chalk-dim); display: block; margin-bottom: 8px; }
+  .doccard .q { font-size: 20.5px; line-height: 1.42; color: var(--chalk); }
+  .doccard .big { display: block; margin-top: 10px; font-family: "Ink Free", system-ui, sans-serif; font-size: 52px; color: var(--amber); }
+  #s6-d2 { left: 0; }
+  #s6-d3 { right: 0; }
+  #s6-flag { position: absolute; left: 50%; transform: translateX(-50%); top: 420px; }
+  #s6-flag .chip { font-family: "Ink Free", system-ui, sans-serif; font-size: 27px; padding: 8px 24px; }
+  #s6-report { position: absolute; left: 40px; right: 40px; top: 512px; border: 1.5px solid var(--line); border-radius: 12px; background: rgba(0,0,0,0.22); padding: 14px 20px; }
+  #s6-report .cap { font-family: "Ink Free", system-ui, sans-serif; font-size: 24px; color: var(--chalk); display: block; margin-bottom: 6px; }
+  #s6-report .bd { font-family: ui-monospace, monospace; font-size: 19.5px; line-height: 1.45; color: var(--chalk-dim); }
+  #s6-report .bd .hl { color: var(--amber); }
+  #s6-foot { position: absolute; left: 40px; right: 40px; top: 700px; font-size: 25px; color: var(--chalk-dim); }
+
+  /* ---- scene 7: numbers ---- */
+  .score { position: absolute; left: 0; right: 0; top: 158px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; grid-auto-rows: min-content; }
+  .stat { border: 2px solid var(--line); border-radius: 14px; padding: 16px 22px; background: rgba(255,255,255,0.035); }
+  .stat .num { font-family: "Ink Free", system-ui, sans-serif; font-size: 66px; line-height: 1; color: var(--chalk); display: block; }
+  .stat .num.teal { color: var(--teal); }
+  .stat .num.amber { color: var(--amber); }
+  .stat .lbl { display: block; margin-top: 8px; font-size: 21.5px; line-height: 1.3; color: var(--chalk-dim); }
+  #s7-foot { position: absolute; left: 0; right: 0; bottom: 8px; font-family: "Ink Free", system-ui, sans-serif; font-size: 29px; color: var(--amber); }
+
+  /* ---- scene 8: why hand-rolled ---- */
+  .trade { position: absolute; top: 195px; width: 600px; border-radius: 14px; padding: 16px 20px; }
+  #s8-cost { left: 0; border: 2px solid var(--line); }
+  #s8-pay { right: 0; border: 2px solid var(--teal); background: rgba(99,211,195,0.05); }
+  .trade .cap { font-family: "Ink Free", system-ui, sans-serif; font-size: 28px; display: block; margin-bottom: 10px; }
+  .trade li { font-size: 21.5px; line-height: 1.42; color: var(--chalk-dim); margin: 0 0 10px 0; }
+  .trade li b { color: var(--chalk); font-weight: 600; }
+  .trade ul { margin: 0; padding-left: 24px; }
+  #s8-q { position: absolute; left: 0; top: 130px; width: 100%; font-family: "Ink Free", system-ui, sans-serif; font-size: 30px; color: var(--amber); }
+  #s8-bottom { position: absolute; left: 0; right: 0; top: 560px; font-family: "Ink Free", system-ui, sans-serif; font-size: 36px; color: var(--chalk); }
+  #s8-mono { position: absolute; left: 0; right: 0; top: 640px; border: 1.5px dashed var(--line); border-radius: 12px; padding: 12px 20px; font-family: ui-monospace, monospace; font-size: 21px; color: var(--chalk-dim); }
+  #s8-mono .hl { color: var(--teal); }
+
+  /* ---- scene 9: recap ---- */
+  .recap { position: absolute; left: 0; right: 0; top: 128px; }
+  .rline { display: grid; grid-template-columns: 64px 1fr; gap: 16px; align-items: center; margin-bottom: 14px; }
+  .rline .ic { width: 54px; height: 54px; border: 2.5px solid var(--teal); border-radius: 50%;
+               display: flex; align-items: center; justify-content: center;
+               font-family: "Ink Free", system-ui, sans-serif; font-size: 26px; color: var(--chalk); }
+  .rline .tx { font-size: 24.5px; line-height: 1.3; color: var(--chalk); }
+  .rline .tx .dim2 { color: var(--chalk-dim); }
+  #s9-close { position: absolute; left: 0; right: 0; top: 660px; font-family: "Ink Free", system-ui, sans-serif; font-size: 46px; color: var(--amber); }
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="swarm-lecture" data-start="0" data-width="1920" data-height="1080" data-duration="367.5">
+
+  <!-- ============ SCENE 1 — one breath vs a team ============ -->
+  <section id="s1" class="clip" data-start="0" data-duration="36.8">
+    <div class="scene-inner">
+      <div class="board">
+        <div class="main">
+          <h1 id="s1-h">One breath<span class="u" id="s1-u"></span></h1>
+          <div id="s1-doodle"></div>
+          <div id="s1-q" class="absbox">
+            <div class="bubble">
+              <span class="who">you ask</span>
+              <span class="txt" id="s1-qtxt">What is the noise level of the XK-7 compressor module?</span>
+            </div>
+          </div>
+          <div id="s1-a" class="absbox">
+            <div class="bubble">
+              <span class="who">one chatbot, one breath</span>
+              <span class="txt">The XK-7 runs at 47 dB(A) and is exceptionally reliable.</span>
+            </div>
+          </div>
+          <div id="s1-stamp" class="absbox"><span class="chip amber">made that up</span></div>
+          <div id="s1-team" class="absbox">
+            <span class="cap">…what real researchers do instead:</span>
+            <div class="crew">
+              <div class="mate" id="s1-m1"><span class="dot"></span><span class="nm">split it</span></div>
+              <div class="mate" id="s1-m2"><span class="dot"></span><span class="nm">read many</span></div>
+              <div class="mate" id="s1-m3"><span class="dot"></span><span class="nm">quote</span></div>
+              <div class="mate" id="s1-m4"><span class="dot"></span><span class="nm">cross-check</span></div>
+              <div class="mate" id="s1-m5"><span class="dot"></span><span class="nm">notice conflict</span></div>
+              <div class="mate" id="s1-m6"><span class="dot"></span><span class="nm">review</span></div>
+            </div>
+          </div>
+          <div id="s1-close">SwarmResearch = that team, automated.</div>
+        </div>
+        <div class="rail">
+          <div class="kcard" id="s1-k1">
+            <span class="term">multi-agent system</span>
+            <span class="def">Several specialized agents handing work to each other — instead of one model doing everything in one breath.</span>
+          </div>
+          <div class="kcard amber" id="s1-k2">
+            <span class="term">the problem</span>
+            <span class="def">One answer, no sources, no way to check. Fluent is not the same as true.</span>
+          </div>
+        </div>
+      </div>
+      <div class="scene-tag">SwarmResearch · 01/09 · a research team in a box</div>
+    </div>
+  </section>
+
+  <!-- ============ SCENE 2 — the team ============ -->
+  <section id="s2" class="clip" data-start="36.8" data-duration="46.6">
+    <div class="scene-inner">
+      <div class="board">
+        <div class="main">
+          <h1 id="s2-h">The team<span class="u teal" id="s2-u"></span></h1>
+          <div class="doodle" id="s2-doodle"></div>
+          <div class="role hot" id="s2-r1"><span class="nm">planner</span><span class="job">reads the question, writes the work plan, splits it into sub-queries</span></div>
+          <div class="role" id="s2-r2"><span class="nm">searchers ×4</span><span class="job">rank the bundled 20-document corpus — TF-IDF: word frequency, weighted by rarity</span></div>
+          <div class="role" id="s2-r3"><span class="nm">readers</span><span class="job">read the found documents, extract claims — short factual sentences with a location</span></div>
+          <div class="role" id="s2-r4"><span class="nm">analyst</span><span class="job">merges claims, removes duplicates, cross-checks them against each other</span></div>
+          <div class="role hot" id="s2-r5"><span class="nm">critic</span><span class="job">the quality gate — verifies receipts, measures evidence coverage, orders more search if thin</span></div>
+          <div class="role" id="s2-r6"><span class="nm">writer</span><span class="job">composes the report — every factual sentence carries a numbered citation [n]</span></div>
+          <div id="s2-foot">Six roles. One question. One report.</div>
+        </div>
+        <div class="rail">
+          <div class="kcard" id="s2-k1">
+            <span class="term">agent</span>
+            <span class="def">A worker with a job description, tools, and just enough judgment for that one job. Here: a plain async function.</span>
+          </div>
+          <div class="kcard blue" id="s2-k2">
+            <span class="term">TF-IDF search</span>
+            <span class="def">Keyword ranking: score by how often your words appear, weighted up for rare, distinctive words.</span>
+          </div>
+          <div class="kcard amber" id="s2-k3">
+            <span class="term">coverage check</span>
+            <span class="def">Does the evidence answer every part of the question? A 0-to-1 score with a threshold (0.8).</span>
+          </div>
+        </div>
+      </div>
+      <div class="scene-tag">SwarmResearch · 02/09 · the agent team</div>
+    </div>
+  </section>
+
+  <!-- ============ SCENE 3 — claims with receipts ============ -->
+  <section id="s3" class="clip" data-start="83.4" data-duration="36.6">
+    <div class="scene-inner">
+      <div class="board">
+        <div class="main">
+          <h1 id="s3-h">Claims with receipts<span class="u" id="s3-u"></span></h1>
+          <div class="doodle" id="s3-doodle"></div>
+          <div id="s3-doc" class="panel absbox">
+            <span class="cap">doc-03 · acoustic-laboratory-report.md <span class="dim">(the source)</span></span>
+            <div class="body">…averaged per the standard. Results. At nominal duty, <span class="mark" id="s3-span">the unit registered a sound pressure level of 42 dB(A) at three metres</span> for the XK-7 compressor module…</div>
+            <div id="s3-off"><span>char_start → 876</span><span>← char_end 946</span></div>
+          </div>
+          <div id="s3-claim" class="absbox">
+            <span class="cap">ClaimRecord</span>
+            <div class="q">"The unit registered a sound pressure level of 42 dB(A) at three metres."</div>
+            <span class="meta mono">doc_id: doc-03 · char_start: 876 · char_end: 946</span>
+          </div>
+          <div id="s3-inv" class="absbox mono">
+            invariant:&nbsp; doc_text[<span class="amber">876</span>:<span class="amber">946</span>] == quote&nbsp; <span class="ok">✓ true</span>
+          </div>
+          <div id="s3-stamp" class="absbox"><span class="chip teal">receipt verified — the critic re-checks every claim</span></div>
+        </div>
+        <div class="rail">
+          <div class="kcard" id="s3-k1">
+            <span class="term">claim</span>
+            <span class="def">One small, checkable factual sentence lifted verbatim from a document — the atom of evidence.</span>
+          </div>
+          <div class="kcard amber" id="s3-k2">
+            <span class="term">provenance</span>
+            <span class="def">The receipts: which document, plus the exact location inside it, so anyone can re-check the original.</span>
+          </div>
+          <div class="kcard blue" id="s3-k3">
+            <span class="term">character offset</span>
+            <span class="def">A position in the text, counted in characters. Verification becomes comparing numbers, not opinions.</span>
+          </div>
+        </div>
+      </div>
+      <div class="scene-tag">SwarmResearch · 03/09 · provenance</div>
+    </div>
+  </section>
+
+  <!-- ============ SCENE 4 — the task DAG ============ -->
+  <section id="s4" class="clip" data-start="120" data-duration="43.5">
+    <div class="scene-inner">
+      <div class="board">
+        <div class="main">
+          <h1 id="s4-h">The task DAG<span class="u teal" id="s4-u"></span></h1>
+          <div class="doodle" id="s4-doodle"></div>
+          <div class="dag">
+            <svg class="stroke" viewBox="0 0 1310 700">
+              <path class="wire" d="M130,297 C 155,297 155,83 180,83"  fill="none" stroke="rgba(158,197,232,0.6)" stroke-width="2.5"/>
+              <path class="wire" d="M130,297 C 155,297 155,231 180,231" fill="none" stroke="rgba(158,197,232,0.6)" stroke-width="2.5"/>
+              <path class="wire" d="M130,297 C 155,297 155,379 180,379" fill="none" stroke="rgba(158,197,232,0.6)" stroke-width="2.5"/>
+              <path class="wire" d="M130,297 C 155,297 155,527 180,527" fill="none" stroke="rgba(158,197,232,0.6)" stroke-width="2.5"/>
+              <path class="wire" d="M310,83  L 360,83"  fill="none" stroke="rgba(99,211,195,0.6)" stroke-width="2.5"/>
+              <path class="wire" d="M310,231 L 360,231" fill="none" stroke="rgba(99,211,195,0.6)" stroke-width="2.5"/>
+              <path class="wire" d="M310,379 L 360,379" fill="none" stroke="rgba(99,211,195,0.6)" stroke-width="2.5"/>
+              <path class="wire" d="M310,527 L 360,527" fill="none" stroke="rgba(99,211,195,0.6)" stroke-width="2.5"/>
+              <path class="wire" d="M490,83  C 515,83 515,283 540,283" fill="none" stroke="rgba(99,211,195,0.6)" stroke-width="2.5"/>
+              <path class="wire" d="M490,231 C 515,231 515,283 540,283" fill="none" stroke="rgba(99,211,195,0.6)" stroke-width="2.5"/>
+              <path class="wire" d="M490,379 C 515,379 515,283 540,283" fill="none" stroke="rgba(99,211,195,0.6)" stroke-width="2.5"/>
+              <path class="wire" d="M490,527 C 515,527 515,283 540,283" fill="none" stroke="rgba(99,211,195,0.6)" stroke-width="2.5"/>
+              <path class="wire" d="M670,283 L 720,279" fill="none" stroke="rgba(245,185,66,0.7)" stroke-width="2.5"/>
+              <path class="wire" d="M850,279 C 880,279 880,173 910,173" fill="none" stroke="rgba(245,185,66,0.7)" stroke-width="2.5"/>
+              <path class="wire" d="M850,279 C 880,279 880,453 910,453" fill="none" stroke="rgba(245,185,66,0.7)" stroke-width="2.5" stroke-dasharray="7 6"/>
+              <path class="wire" d="M1040,173 C 1065,173 1065,295 1090,295" fill="none" stroke="rgba(242,240,233,0.45)" stroke-width="2.5"/>
+              <path class="wire" d="M1040,453 C 1065,453 1065,300 1090,300" fill="none" stroke="rgba(242,240,233,0.45)" stroke-width="2.5"/>
+            </svg>
+            <div class="dnode" id="s4-plan" style="left:0px; top:262px;">plan<span class="sub">query → tasks</span></div>
+            <div class="dnode" id="s4-s0" style="left:180px; top:60px;">search-0</div>
+            <div class="dnode" id="s4-s1" style="left:180px; top:208px;">search-1</div>
+            <div class="dnode" id="s4-s2" style="left:180px; top:356px;">search-2</div>
+            <div class="dnode" id="s4-s3" style="left:180px; top:504px;">search-3</div>
+            <div class="dnode teal" id="s4-r0" style="left:360px; top:60px;">read-0<span class="sub">claims</span></div>
+            <div class="dnode teal" id="s4-r1" style="left:360px; top:208px;">read-1<span class="sub">claims</span></div>
+            <div class="dnode teal" id="s4-r2" style="left:360px; top:356px;">read-2<span class="sub">claims</span></div>
+            <div class="dnode teal" id="s4-r3" style="left:360px; top:504px;">read-3<span class="sub">claims</span></div>
+            <div class="dnode teal" id="s4-an" style="left:540px; top:250px;">analyze<span class="sub">merge · dedupe</span></div>
+            <div class="dnode diamond" id="s4-cr" style="left:720px; top:246px;">critic<span class="sub">coverage ≥ 0.8?</span></div>
+            <div class="dnode amber" id="s4-fin" style="left:910px; top:140px;">finalize<span class="sub">passthrough</span></div>
+            <div class="dnode amber" id="s4-gap" style="left:910px; top:420px;">gap-fill ×1<span class="sub">search→read→analyze</span></div>
+            <div class="dnode" id="s4-wr" style="left:1090px; top:262px;">writer<span class="sub">cited report</span></div>
+            <div id="s4-sem" class="absbox"><span class="chip ghost">semaphore — max 4 in flight</span></div>
+          </div>
+          <div id="s4-note">acyclic — <b>cycles are rejected at build time</b>; the unrouted branch settles into “skipped”</div>
+        </div>
+        <div class="rail">
+          <div class="kcard" id="s4-k1">
+            <span class="term">task DAG</span>
+            <span class="def">A work plan as boxes and arrows: every arrow means "finish this first" — and no arrow loops back.</span>
+          </div>
+          <div class="kcard blue" id="s4-k2">
+            <span class="term">fan-out</span>
+            <span class="def">One step splitting into many parallel steps — cheap to draw, expensive if unbounded.</span>
+          </div>
+          <div class="kcard blue" id="s4-k3">
+            <span class="term">semaphore</span>
+            <span class="def">A counter limiting how many tasks run at once. No free slot? Wait.</span>
+          </div>
+          <div class="kcard amber" id="s4-k4">
+            <span class="term">conditional edges</span>
+            <span class="def">Arrows chosen at runtime: a router reads a node's result and picks the branch.</span>
+          </div>
+          <div class="kcard amber" id="s4-k5">
+            <span class="term">gap-fill branch</span>
+            <span class="def">The pre-built "second attempt" path — one bounded pass, used once or skipped.</span>
+          </div>
+        </div>
+      </div>
+      <div class="scene-tag">SwarmResearch · 04/09 · the plan is a graph</div>
+    </div>
+  </section>
+
+  <!-- ============ SCENE 5 — crash and resume ============ -->
+  <section id="s5" class="clip" data-start="163.5" data-duration="40.3">
+    <div class="scene-inner">
+      <div class="board">
+        <div class="main">
+          <h1 id="s5-h">Crash? Resume.<span class="u" id="s5-u"></span></h1>
+          <div class="doodle" id="s5-doodle"></div>
+          <div class="runrow absbox" id="s5-run1" style="top:170px;">
+            <div class="nchip done" id="s5-n1">plan<span class="st">✓</span></div>
+            <div class="nchip done" id="s5-n2">search-0<span class="st">✓</span></div>
+            <div class="nchip done" id="s5-n3">search-1<span class="st">✓</span></div>
+            <div class="nchip done" id="s5-n4">search-2<span class="st">✓</span></div>
+            <div class="nchip done" id="s5-n5">search-3<span class="st">✓</span></div>
+            <div class="nchip done" id="s5-n6">read-0<span class="st">✓</span></div>
+            <div class="nchip fail" id="s5-n7">read-1<span class="st">✕ crash</span></div>
+            <div class="nchip" id="s5-n8">read-2<span class="st">pending</span></div>
+            <div class="nchip" id="s5-n9">read-3<span class="st">pending</span></div>
+          </div>
+          <div id="s5-crashmark" class="absbox">— the process dies here</div>
+          <div id="s5-cp" class="absbox" style="top:315px;">
+            <span class="cap">checkpoint → SQLite, WAL mode</span>
+            <span class="bd">every node, the moment it finishes: its output + the fact that it fired. A crash loses the interrupted step — nothing more.</span>
+          </div>
+          <div class="runrow absbox" id="s5-run2" style="top:475px;">
+            <div class="nchip done" id="s5-m1">plan<span class="st cnt">ran ×1</span></div>
+            <div class="nchip done" id="s5-m2">search-0<span class="st cnt">ran ×1</span></div>
+            <div class="nchip done" id="s5-m3">search-1<span class="st cnt">ran ×1</span></div>
+            <div class="nchip done" id="s5-m4">search-2<span class="st cnt">ran ×1</span></div>
+            <div class="nchip done" id="s5-m5">search-3<span class="st cnt">ran ×1</span></div>
+            <div class="nchip done" id="s5-m6">read-0<span class="st cnt">ran ×1</span></div>
+            <div class="nchip done" id="s5-m7">read-1<span class="st cnt amber">ran ×2</span></div>
+            <div class="nchip done" id="s5-m8">read-2<span class="st">resumed</span></div>
+            <div class="nchip done" id="s5-m9">read-3<span class="st">resumed</span></div>
+          </div>
+          <div id="s5-proof" class="absbox mono">execution counters: finished nodes ran <span class="cnt">exactly once</span> — only read-1 ran again</div>
+          <div id="s5-foot">One interrupted step redone — that's the entire cost of a crash.</div>
+        </div>
+        <div class="rail">
+          <div class="kcard" id="s5-k1">
+            <span class="term">checkpoint</span>
+            <span class="def">A saved snapshot of progress: which nodes finished and what they produced.</span>
+          </div>
+          <div class="kcard blue" id="s5-k2">
+            <span class="term">SQLite WAL</span>
+            <span class="def">Write-ahead logging: writes hit a log first, so a crash mid-write can't corrupt the record.</span>
+          </div>
+          <div class="kcard teal" id="s5-k3">
+            <span class="term">resume</span>
+            <span class="def">Restart by loading the last checkpoint. A good resume never redoes finished work.</span>
+          </div>
+          <div class="kcard amber" id="s5-k4">
+            <span class="term">execution counter</span>
+            <span class="def">A tally of how many times each node really ran — proof, not intentions.</span>
+          </div>
+        </div>
+      </div>
+      <div class="scene-tag">SwarmResearch · 05/09 · crash-safety</div>
+    </div>
+  </section>
+
+  <!-- ============ SCENE 6 — the planted contradiction ============ -->
+  <section id="s6" class="clip" data-start="203.8" data-duration="37.4">
+    <div class="scene-inner">
+      <div class="board">
+        <div class="main">
+          <h1 id="s6-h">The planted contradiction<span class="u" id="s6-u"></span></h1>
+          <div class="doodle" id="s6-doodle"></div>
+          <div class="doccard absbox" id="s6-d2">
+            <span class="cap">doc-02 · xk7-technical-specification.md · chars 830–918</span>
+            <div class="q">"…the rated sound pressure level of the XK-7 compressor module is <span class="amber">47 dB(A)</span> at three metres…"</div>
+            <span class="big">47 dB(A)</span>
+          </div>
+          <div class="doccard absbox" id="s6-d3">
+            <span class="cap">doc-03 · acoustic-laboratory-report.md · chars 876–946</span>
+            <div class="q">"…the unit registered a sound pressure level of <span class="amber">42 dB(A)</span> at three metres…"</div>
+            <span class="big">42 dB(A)</span>
+          </div>
+          <div id="s6-flag" class="absbox"><span class="chip amber">numeric mismatch — XK-7 noise, same entity, same attribute</span></div>
+          <div id="s6-report" class="absbox">
+            <span class="cap">the final report — verbatim excerpt</span>
+            <div class="bd">## Conflicting evidence<br>- numeric mismatch on XK-7 compressor module noise: source doc-02 states <span class="hl">"47 dB(A)"</span> [5] while source doc-03 states <span class="hl">"42 dB(A)"</span> [6].</div>
+          </div>
+          <div id="s6-foot">It never picks a winner. It tells you the sources disagree — with both citations attached.</div>
+        </div>
+        <div class="rail">
+          <div class="kcard amber" id="s6-k1">
+            <span class="term">contradiction detection</span>
+            <span class="def">Compare claims about the same entity and attribute — flag numeric mismatches and negations.</span>
+          </div>
+          <div class="kcard" id="s6-k2">
+            <span class="term">entity canonicalization</span>
+            <span class="def">Merge the different names for the same thing — "XK-7", "the XK-7 module", "XK7" become one entity.</span>
+          </div>
+          <div class="kcard blue" id="s6-k3">
+            <span class="term">corpus</span>
+            <span class="def">The fixed set of 20 bundled documents — with this contradiction planted on purpose.</span>
+          </div>
+        </div>
+      </div>
+      <div class="scene-tag">SwarmResearch · 06/09 · cross-checking</div>
+    </div>
+  </section>
+
+  <!-- ============ SCENE 7 — the numbers ============ -->
+  <section id="s7" class="clip" data-start="241.2" data-duration="38.3">
+    <div class="scene-inner">
+      <div class="board">
+        <div class="main">
+          <h1 id="s7-h">Measured, not claimed<span class="u teal" id="s7-u"></span></h1>
+          <div class="doodle" id="s7-doodle"></div>
+          <div class="score">
+            <div class="stat" id="s7-a"><span class="num" id="s7-av">0</span><span class="lbl">automated tests — fully offline, no network, the suite runs in about 2.3 seconds</span></div>
+            <div class="stat" id="s7-b"><span class="num teal" id="s7-bv">0</span><span class="lbl">claims extracted and verified in the sample run — every one carries a receipt</span></div>
+            <div class="stat" id="s7-c"><span class="num amber" id="s7-cv">0.0</span><span class="lbl"><b>hallucination rate</b> — the fraction of claims whose quote can't be found at its recorded position. 0.0 = every receipt verifies</span></div>
+            <div class="stat" id="s7-d"><span class="num teal" id="s7-dv">0.0</span><span class="lbl"><b>citation coverage</b> — the fraction of factual sentences carrying a citation. 1.0 = zero uncited factual sentences</span></div>
+            <div class="stat" id="s7-e"><span class="num amber" id="s7-ev">0</span><span class="lbl">contradiction surfaced — 42 vs 47 dB(A), in the final report, every run</span></div>
+          </div>
+          <div id="s7-foot">Every number here is a test assertion, not a marketing line.</div>
+        </div>
+        <div class="rail">
+          <div class="kcard amber" id="s7-k1">
+            <span class="term">hallucination rate</span>
+            <span class="def">Claims lacking valid provenance ÷ total claims. The offline suite asserts exactly 0.0.</span>
+          </div>
+          <div class="kcard teal" id="s7-k2">
+            <span class="term">citation coverage</span>
+            <span class="def">The report is parsed sentence by sentence; every factual sentence needs [n] or an explicit analyst-inference marker.</span>
+          </div>
+        </div>
+      </div>
+      <div class="scene-tag">SwarmResearch · 07/09 · the numbers</div>
+    </div>
+  </section>
+
+  <!-- ============ SCENE 8 — why hand-rolled ============ -->
+  <section id="s8" class="clip" data-start="279.5" data-duration="39.4">
+    <div class="scene-inner">
+      <div class="board">
+        <div class="main">
+          <h1 id="s8-h">Why hand-rolled?<span class="u" id="s8-u"></span></h1>
+          <div class="doodle" id="s8-doodle"></div>
+          <div id="s8-q" class="absbox">LangGraph, LangChain, CrewAI — all mature. So why build Orchestra?</div>
+          <div class="trade absbox" id="s8-cost">
+            <span class="cap dim">the honest cost</span>
+            <ul>
+              <li><b>No ecosystem</b> — no community integrations</li>
+              <li><b>No visual debugger</b> or studio UI on day one</li>
+              <li><b>You own the edge cases</b> — e.g. a pause cancels in-flight siblings and rewinds them to pending</li>
+            </ul>
+          </div>
+          <div class="trade absbox" id="s8-pay">
+            <span class="cap teal">the payoff</span>
+            <ul>
+              <li><b>~600 lines</b>, fully auditable, <b>0 framework dependencies</b></li>
+              <li><b>Plain async nodes</b> — no lock-in, no upgrade treadmill</li>
+              <li><b>Exact checkpoint granularity</b> — the no-recompute guarantee is testable</li>
+              <li><b>Typed event bus + spans</b> — observable by default</li>
+            </ul>
+          </div>
+          <div id="s8-bottom">For deep research, the runtime is the product.</div>
+          <div id="s8-mono" class="absbox">"what happens when a node times out mid-retry?" → <span class="hl">read one function.</span></div>
+        </div>
+        <div class="rail">
+          <div class="kcard" id="s8-k1">
+            <span class="term">asyncio</span>
+            <span class="def">Python's built-in concurrency for I/O-bound work: many tasks, one thread, awaiting on slow things.</span>
+          </div>
+          <div class="kcard teal" id="s8-k2">
+            <span class="term">event bus</span>
+            <span class="def">The runtime's live narration of itself: node started / finished / failed / skipped, graph completed.</span>
+          </div>
+          <div class="kcard amber" id="s8-k3">
+            <span class="term">human-in-the-loop</span>
+            <span class="def">The run pauses at chosen points and waits for a person — the pause survives a restart.</span>
+          </div>
+        </div>
+      </div>
+      <div class="scene-tag">SwarmResearch · 08/09 · the design trade</div>
+    </div>
+  </section>
+
+  <!-- ============ SCENE 9 — recap ============ -->
+  <section id="s9" class="clip" data-start="318.9" data-duration="48.6">
+    <div class="scene-inner">
+      <div class="board">
+        <div class="main">
+          <h1 id="s9-h">Recap — say it back<span class="u" id="s9-u"></span></h1>
+          <div class="doodle" id="s9-doodle"></div>
+          <div class="recap">
+            <div class="rline" id="s9-l1"><span class="ic">1</span><span class="tx">One chatbot answers in one breath. <span class="dim2">A team splits the work, quotes sources, checks itself.</span></span></div>
+            <div class="rline" id="s9-l2"><span class="ic">2</span><span class="tx">Claims carry receipts: <span class="dim2">quote + document + character position — verified by the critic.</span></span></div>
+            <div class="rline" id="s9-l3"><span class="ic">3</span><span class="tx">The plan is a task DAG. <span class="dim2">Parallel where safe, ordered where required, no cycles.</span></span></div>
+            <div class="rline" id="s9-l4"><span class="ic">4</span><span class="tx">Checkpoints make crashes cheap. <span class="dim2">Execution counters prove finished nodes never re-run.</span></span></div>
+            <div class="rline" id="s9-l5"><span class="ic">5</span><span class="tx">42 vs 47 dB(A)? <span class="dim2">The report says so — it never guesses.</span></span></div>
+            <div class="rline" id="s9-l6"><span class="ic">6</span><span class="tx">hallucination rate <span class="amber">0.0</span> · citation coverage <span class="amber">1.0</span> · <span class="dim2">85 offline tests.</span></span></div>
+          </div>
+          <div id="s9-close">That's SwarmResearch — a research team in a box.</div>
+        </div>
+        <div class="rail">
+          <div class="kcard" id="s9-k1">
+            <span class="term">study material</span>
+            <span class="def">GLOSSARY.md in the repo root defines every keyword from this lecture — 49 terms, plain English.</span>
+          </div>
+          <div class="kcard amber" id="s9-k2">
+            <span class="term">try it</span>
+            <span class="def">swarm research "How noisy is the XK-7?" --offline --stream</span>
+          </div>
+        </div>
+      </div>
+      <div class="scene-tag">SwarmResearch · 09/09 · recap</div>
+    </div>
+  </section>
+
+  <!-- ============ AUDIO ============ -->
+  <audio id="music-1" data-start="0" data-duration="117.384" data-track-index="10" data-volume="0.13" src="assets/music/happy-beats-business-moves-vol-12-by-ende-dot-app.mp3"></audio>
+  <audio id="music-2" data-start="117.384" data-duration="117.384" data-track-index="10" data-volume="0.13" src="assets/music/happy-beats-business-moves-vol-12-by-ende-dot-app.mp3"></audio>
+  <audio id="music-3" data-start="234.768" data-duration="117.384" data-track-index="10" data-volume="0.13" src="assets/music/happy-beats-business-moves-vol-12-by-ende-dot-app.mp3"></audio>
+  <audio id="music-4" data-start="352.152" data-duration="15.348" data-track-index="10" data-volume="0.13"
+    data-automation='{"version":1,"lanes":[{"target":"volume","points":[{"t":0,"v":0.13},{"t":11.8,"v":0.13},{"t":15.348,"v":0}]}]}'
+    src="assets/music/happy-beats-business-moves-vol-12-by-ende-dot-app.mp3"></audio>
+
+  <audio id="vo-1" data-start="1.1"    data-duration="34.19" data-track-index="3"  data-volume="1" src="assets/voiceover/scene01.wav"></audio>
+  <audio id="vo-2" data-start="37.9"   data-duration="44.03" data-track-index="4"  data-volume="1" src="assets/voiceover/scene02.wav"></audio>
+  <audio id="vo-3" data-start="84.5"   data-duration="34.00" data-track-index="5"  data-volume="1" src="assets/voiceover/scene03.wav"></audio>
+  <audio id="vo-4" data-start="121.1"  data-duration="40.93" data-track-index="6"  data-volume="1" src="assets/voiceover/scene04.wav"></audio>
+  <audio id="vo-5" data-start="164.6"  data-duration="37.73" data-track-index="7"  data-volume="1" src="assets/voiceover/scene05.wav"></audio>
+  <audio id="vo-6" data-start="204.9"  data-duration="34.81" data-track-index="8"  data-volume="1" src="assets/voiceover/scene06.wav"></audio>
+  <audio id="vo-7" data-start="242.3"  data-duration="35.73" data-track-index="9"  data-volume="1" src="assets/voiceover/scene07.wav"></audio>
+  <audio id="vo-8" data-start="280.6"  data-duration="36.84" data-track-index="11" data-volume="1" src="assets/voiceover/scene08.wav"></audio>
+  <audio id="vo-9" data-start="320.0"  data-duration="45.56" data-track-index="12" data-volume="1" src="assets/voiceover/scene09.wav"></audio>
+
+  <audio id="sfx-1"  data-start="2.9"    data-duration="0.12" data-track-index="13" data-volume="0.4"  src="assets/sfx/interface/drop_001.ogg"></audio>
+  <audio id="sfx-2"  data-start="10.2"   data-duration="0.14" data-track-index="14" data-volume="0.5"  src="assets/sfx/impact/impactSoft_medium_000.ogg"></audio>
+  <audio id="sfx-3"  data-start="40.4"   data-duration="0.12" data-track-index="15" data-volume="0.45" src="assets/sfx/interface/drop_001.ogg"></audio>
+  <audio id="sfx-4"  data-start="67.4"   data-duration="0.12" data-track-index="15" data-volume="0.45" src="assets/sfx/interface/drop_001.ogg"></audio>
+  <audio id="sfx-5"  data-start="106.4"  data-duration="0.14" data-track-index="16" data-volume="0.5"  src="assets/sfx/impact/impactSoft_medium_000.ogg"></audio>
+  <audio id="sfx-6"  data-start="171.5"  data-duration="0.2"  data-track-index="17" data-volume="0.55" src="assets/sfx/impact/impactSoft_heavy_000.ogg"></audio>
+  <audio id="sfx-7"  data-start="182.1"  data-duration="0.12" data-track-index="18" data-volume="0.4"  src="assets/sfx/interface/drop_001.ogg"></audio>
+  <audio id="sfx-8"  data-start="217.9"  data-duration="0.14" data-track-index="19" data-volume="0.5"  src="assets/sfx/impact/impactSoft_medium_002.ogg"></audio>
+  <audio id="sfx-9"  data-start="253.8"  data-duration="0.12"  data-track-index="20" data-volume="0.3"  src="assets/sfx/interface/bong_001.ogg"></audio>
+  <audio id="sfx-10" data-start="357.0"  data-duration="0.12" data-track-index="21" data-volume="0.45" src="assets/sfx/interface/drop_001.ogg"></audio>
+</div>
+
+<script>
+  const S = { s1: 0, s2: 36.8, s3: 83.4, s4: 120.0, s5: 163.5, s6: 203.8, s7: 241.2, s8: 279.5, s9: 318.9 };
+  const at = (k, off) => S[k] + off;
+
+  // chalk-wire initial state: draw-on via dashoffset (length measured once, at setup)
+  document.querySelectorAll("path.wire").forEach(p => {
+    const L = p.getTotalLength();
+    p.style.strokeDasharray = String(L);
+    p.style.strokeDashoffset = String(L);
+  });
+
+  const tl = gsap.timeline({ paused: true });
+
+  // helpers
+  function head(k, off) {
+    tl.from(`#${k} h1`, { opacity: 0, x: -20, duration: 0.55, ease: "power2.out" }, at(k, off));
+    tl.from(`#${k} .u`, { scaleX: 0, transformOrigin: "left center", duration: 0.6, ease: "power2.inOut" }, at(k, off + 0.15));
+  }
+  function pop(sel, t, extra) {
+    tl.from(sel, Object.assign({ opacity: 0, y: 26, duration: 0.55, ease: "power3.out" }, extra || {}), t);
+  }
+  function ambient(k, dur, ringSel, glowSel) {
+    // continuous chalk-ring rotation (ease none => never static) + glow breathing
+    tl.fromTo(ringSel, { rotation: 0 }, { rotation: 360, duration: Math.max(dur, 24), ease: "none", repeat: 0, transformOrigin: "50% 50%" }, at(k, 0));
+    tl.fromTo(glowSel, { opacity: 0.35, scale: 1 }, { opacity: 0.6, scale: 1.05, duration: 4, ease: "sine.inOut", yoyo: true,
+      repeat: Math.max(0, Math.floor(dur / 4) - 1), transformOrigin: "50% 50%" }, at(k, 0));
+  }
+
+  // ---------- scene 1 ----------
+  head("s1", 0.3);
+  ambient("s1", 36.8, "#s1-doodle", "#s1-doodle");
+  pop("#s1-q", at("s1", 2.2));
+  pop("#s1-a", at("s1", 6.8), { y: -22 });
+  tl.from("#s1-stamp", { opacity: 0, scale: 1.7, rotation: -14, duration: 0.45, ease: "back.out(1.8)" }, at("s1", 10.6));
+  pop("#s1-team .cap", at("s1", 17.6));
+  tl.from("#s1-m1", { opacity: 0, y: 24, duration: 0.45, ease: "back.out(1.5)" }, at("s1", 19.4));
+  tl.from("#s1-m2", { opacity: 0, y: 24, duration: 0.45, ease: "back.out(1.5)" }, at("s1", 20.2));
+  tl.from("#s1-m3", { opacity: 0, y: 24, duration: 0.45, ease: "back.out(1.5)" }, at("s1", 21.0));
+  tl.from("#s1-m4", { opacity: 0, y: 24, duration: 0.45, ease: "back.out(1.5)" }, at("s1", 21.8));
+  tl.from("#s1-m5", { opacity: 0, y: 24, duration: 0.45, ease: "back.out(1.5)" }, at("s1", 22.6));
+  tl.from("#s1-m6", { opacity: 0, y: 24, duration: 0.45, ease: "back.out(1.5)" }, at("s1", 23.4));
+  pop("#s1-close", at("s1", 29.8));
+  pop("#s1-k1", at("s1", 25.4));
+  pop("#s1-k2", at("s1", 27.4));
+
+  // ---------- scene 2 ----------
+  head("s2", 0.3);
+  ambient("s2", 46.6, "#s2-doodle", "#s2-doodle");
+  pop("#s2-r1", at("s2", 3.2));
+  pop("#s2-r2", at("s2", 9.2));
+  pop("#s2-r3", at("s2", 15.6));
+  pop("#s2-r4", at("s2", 18.9));
+  pop("#s2-r5", at("s2", 22.7));
+  pop("#s2-r6", at("s2", 29.8));
+  pop("#s2-foot", at("s2", 38.6));
+  pop("#s2-k1", at("s2", 4.4));
+  pop("#s2-k2", at("s2", 10.4));
+  pop("#s2-k3", at("s2", 23.6));
+
+  // ---------- scene 3 ----------
+  head("s3", 0.3);
+  ambient("s3", 36.6, "#s3-doodle", "#s3-doodle");
+  pop("#s3-doc", at("s3", 2.4));
+  pop("#s3-claim", at("s3", 7.6));
+  tl.to("#s3-span", { backgroundColor: "rgba(245,185,66,0.28)", borderBottomColor: "#f5b942", duration: 0.5, ease: "power1.inOut" }, at("s3", 12.4));
+  pop("#s3-off", at("s3", 13.6));
+  pop("#s3-inv", at("s3", 17.4));
+  tl.from("#s3-stamp", { opacity: 0, scale: 1.5, duration: 0.45, ease: "back.out(1.8)" }, at("s3", 22.6));
+  pop("#s3-k1", at("s3", 4.6));
+  pop("#s3-k2", at("s3", 9.4));
+  pop("#s3-k3", at("s3", 15.2));
+
+  // ---------- scene 4 ----------
+  head("s4", 0.3);
+  ambient("s4", 43.5, "#s4-doodle", "#s4-doodle");
+  pop("#s4-plan", at("s4", 2.8));
+  tl.to("#s4 .wire", { strokeDashoffset: 0, duration: 0.5, stagger: 0.14, ease: "power1.inOut" }, at("s4", 8.2));
+  pop("#s4-s0", at("s4", 8.6)); pop("#s4-s1", at("s4", 8.95)); pop("#s4-s2", at("s4", 9.3)); pop("#s4-s3", at("s4", 9.65));
+  pop("#s4-sem", at("s4", 10.6));
+  pop("#s4-r0", at("s4", 14.6)); pop("#s4-r1", at("s4", 14.95)); pop("#s4-r2", at("s4", 15.3)); pop("#s4-r3", at("s4", 15.65));
+  pop("#s4-an", at("s4", 18.4));
+  pop("#s4-cr", at("s4", 21.0));
+  pop("#s4-fin", at("s4", 25.6));
+  pop("#s4-gap", at("s4", 30.4));
+  pop("#s4-wr", at("s4", 26.4));
+  pop("#s4-note", at("s4", 35.4));
+  pop("#s4-k1", at("s4", 3.8));
+  pop("#s4-k2", at("s4", 9.0));
+  pop("#s4-k3", at("s4", 10.8));
+  pop("#s4-k4", at("s4", 24.4));
+  pop("#s4-k5", at("s4", 30.8));
+
+  // ---------- scene 5 ----------
+  head("s5", 0.3);
+  ambient("s5", 40.3, "#s5-doodle", "#s5-doodle");
+  tl.from("#s5-run1 .nchip", { opacity: 0, y: 20, duration: 0.4, stagger: 0.12, ease: "power2.out" }, at("s5", 2.4));
+  tl.from("#s5-crashmark", { opacity: 0, x: -30, duration: 0.4, ease: "power3.out" }, at("s5", 8.0));
+  tl.to("#s5-n7", { backgroundColor: "rgba(245,185,66,0.16)", duration: 0.3 }, at("s5", 8.2));
+  pop("#s5-cp", at("s5", 13.2));
+  tl.from("#s5-run2 .nchip", { opacity: 0, y: 20, duration: 0.35, stagger: 0.09, ease: "power2.out" }, at("s5", 19.6));
+  pop("#s5-proof", at("s5", 26.4));
+  tl.from("#s5-foot", { opacity: 0, y: 18, duration: 0.55, ease: "power3.out" }, at("s5", 32.2));
+  pop("#s5-k1", at("s5", 14.4));
+  pop("#s5-k2", at("s5", 15.6));
+  pop("#s5-k3", at("s5", 20.6));
+  pop("#s5-k4", at("s5", 27.4));
+
+  // ---------- scene 6 ----------
+  head("s6", 0.3);
+  ambient("s6", 37.4, "#s6-doodle", "#s6-doodle");
+  pop("#s6-d2", at("s6", 2.4));
+  pop("#s6-d3", at("s6", 7.0));
+  tl.from("#s6-flag", { opacity: 0, scale: 1.5, duration: 0.45, ease: "back.out(1.8)" }, at("s6", 14.2));
+  tl.from("#s6-d2 .big, #s6-d3 .big", { opacity: 0.35, scale: 0.92, duration: 0.5, stagger: 0.12, ease: "power2.out" }, at("s6", 14.0));
+  pop("#s6-report", at("s6", 21.8));
+  pop("#s6-foot", at("s6", 29.6));
+  pop("#s6-k1", at("s6", 15.4));
+  pop("#s6-k2", at("s6", 17.0));
+  pop("#s6-k3", at("s6", 24.0));
+
+  // ---------- scene 7 ----------
+  head("s7", 0.3);
+  ambient("s7", 38.3, "#s7-doodle", "#s7-doodle");
+  function counter(sel, target, decimals, t) {
+    const obj = { v: 0 };
+    tl.to(obj, {
+      v: target, duration: 1.2, ease: "power1.out",
+      onUpdate: () => { document.querySelector(sel).textContent = obj.v.toFixed(decimals); }
+    }, t);
+  }
+  pop("#s7-a", at("s7", 2.6));  counter("#s7-av", 85, 0, at("s7", 2.8));
+  pop("#s7-b", at("s7", 7.2));  counter("#s7-bv", 34, 0, at("s7", 7.4));
+  pop("#s7-c", at("s7", 12.2)); counter("#s7-cv", 0, 1, at("s7", 12.4));
+  pop("#s7-d", at("s7", 18.0)); counter("#s7-dv", 1, 1, at("s7", 18.2));
+  pop("#s7-e", at("s7", 23.4)); counter("#s7-ev", 1, 0, at("s7", 23.6));
+  tl.from("#s7-foot", { opacity: 0, y: 18, duration: 0.55, ease: "power3.out" }, at("s7", 29.4));
+  pop("#s7-k1", at("s7", 13.4));
+  pop("#s7-k2", at("s7", 19.2));
+
+  // ---------- scene 8 ----------
+  head("s8", 0.3);
+  ambient("s8", 39.4, "#s8-doodle", "#s8-doodle");
+  pop("#s8-q", at("s8", 2.2));
+  pop("#s8-cost", at("s8", 9.0));
+  tl.from("#s8-cost li", { opacity: 0, x: -22, duration: 0.4, stagger: 0.5, ease: "power2.out" }, at("s8", 9.6));
+  pop("#s8-pay", at("s8", 17.2));
+  tl.from("#s8-pay li", { opacity: 0, x: 22, duration: 0.4, stagger: 0.55, ease: "power2.out" }, at("s8", 17.8));
+  tl.from("#s8-bottom", { opacity: 0, y: 18, duration: 0.6, ease: "power3.out" }, at("s8", 28.0));
+  pop("#s8-mono", at("s8", 33.2));
+  pop("#s8-k1", at("s8", 18.4));
+  pop("#s8-k2", at("s8", 20.2));
+  pop("#s8-k3", at("s8", 24.0));
+
+  // ---------- scene 9 ----------
+  head("s9", 0.3);
+  ambient("s9", 48.6, "#s9-doodle", "#s9-doodle");
+  pop("#s9-l1", at("s9", 2.6));
+  pop("#s9-l2", at("s9", 8.4));
+  pop("#s9-l3", at("s9", 14.2));
+  pop("#s9-l4", at("s9", 20.0));
+  pop("#s9-l5", at("s9", 25.8));
+  pop("#s9-l6", at("s9", 31.0));
+  tl.from("#s9-close", { opacity: 0, y: 24, scale: 0.96, duration: 0.7, ease: "power3.out" }, at("s9", 38.0));
+  pop("#s9-k1", at("s9", 33.6));
+  pop("#s9-k2", at("s9", 35.4));
+
+  window.__timelines["swarm-lecture"] = tl;
+</script>
+</body>
+</html>
