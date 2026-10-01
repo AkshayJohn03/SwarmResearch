@@ -1,5 +1,8 @@
 # SwarmResearch
 
+[![▶ whiteboard explainer video · 6m07s](https://img.shields.io/badge/%E2%96%B6_whiteboard_explainer-6m07s-E8B44A?style=flat-square&logo=googleplay&logoColor=white)](brag-output/brag.mp4)
+
+
 **A multiagent deep-research assistant running on a hand-rolled async orchestration runtime — no LangGraph, no LangChain, no CrewAI.**
 
 SwarmResearch takes a research question and turns it into a dynamically-planned task DAG: a planner decomposes the question into sub-queries, search nodes retrieve documents, reader nodes extract provenance-pinned claims, an analyst merges and cross-checks them, a critic gates coverage and triggers targeted re-tasking, and a writer composes a fully-cited markdown report. Every stage runs on **Orchestra**, a from-scratch asyncio task-graph runtime with typed channels, conditional edges, per-node retry/timeout, crash-resumable checkpointing, human-in-the-loop pauses, a typed event bus, and OpenTelemetry-style span emission.
